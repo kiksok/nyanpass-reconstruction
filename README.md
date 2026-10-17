@@ -21,7 +21,11 @@ S=nyanpass-node bash <(curl -fLSs https://github.com/kiksok/nyanpass-reconstruct
   '-u https://你的面板域名 -t 设备组TOKEN --connect-host 节点可达IP'
 ```
 
-完整说明见 [DEPLOY.md](DEPLOY.md)。当前版本 **v0.6.0**，下载见 [Releases](https://github.com/kiksok/nyanpass-reconstruction/releases)。
+完整说明见 [DEPLOY.md](DEPLOY.md)。当前版本 **v0.7.0**，下载见 [Releases](https://github.com/kiksok/nyanpass-reconstruction/releases/tag/v0.7.0)。
+
+0.7.0 补齐单端 ws/http/tls_simple 的 TCP 与 UDP、私有多节点和备用出口；接入 UDP 负载均衡、双向限速、共享 IP/连接额度、首报 PROXY v2、多跳计费及源进源出。修复单端创建、权限撤销、令牌重置和协议显示。
+
+**面板与所有节点均须更新。旧 TCP 规则保留原设置，需要 UDP 时，在规则编辑或批量修改中选择“TCP + UDP”。** TLS 入站或入口禁用 UDP 时只监听 TCP。UDP 入站 PROXY 使用独立开关；普通 UDP 客户端应保持关闭。详细语义与验证边界见部署文档。
 
 恢复版支持原生节点自动配置、同组多机、TCP/UDP 转发、多跳计费、TLS 卸载、入站 PROXY、终端与诊断。原版商业授权服务和原版 gRPC 运维协议没有完整还原；这份发行不宣称与原版所有功能等价。
 
