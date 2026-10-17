@@ -14,7 +14,7 @@ bash <(curl -fLSs https://github.com/kiksok/nyanpass-reconstruction/releases/lat
 
 ## 节点
 
-在设备组页面选择“对接”，设置服务名、下载线路、可选连接地址，复制生成的命令到节点机器执行。同组多机使用同一 token，每台机器保留独立 UUID。多网卡或 NAT 环境请填写可被入口访问的 `--connect-host`；默认网卡地址未必是公网地址。
+在设备组页面选择“对接”，设置服务名、下载线路、可选连接地址，复制生成的命令到节点机器执行。同组多机使用同一 token，每台机器保留独立 UUID。通配监听时节点自动探测公网IPv4/IPv6和地区并缓存；显式 `--connect-host` 或DNS连接地址优先。多网卡或NAT环境仍应核对入口实际可达性，可用 `--no-public-discovery` 关闭外部发现。没有地区证据时显示未知。
 
 ```bash
 S=nyanpass-node bash <(curl -fLSs https://github.com/kiksok/nyanpass-reconstruction/releases/latest/download/nyanpass-install.sh) rel_nodeclient \
@@ -79,3 +79,23 @@ Release 提供四个 ELF 文件：`rel_backend_linux_amd64`、`rel_backend_linux
 面板与节点均需更新。分别在对应机器运行其安装目录中的 `update.sh`：默认面板为 `bash /opt/nyanpass/update.sh`，默认节点为 `bash /opt/nyanpass-node/update.sh`；自定义服务名时使用实际路径。更新保留账号、数据库、设备组token、节点UUID及证书。面板管理员也可在节点状态页下发恢复版节点的受控更新。
 
 更新后刷新状态页面。新旧两页均能独立初始化，不要求先打开首页或依赖旧浏览器更新缓存。CPU与网卡速率在下一次心跳后得到有效差值；首次采样或旧节点没有上报的指标显示 `--`。无地区数据时显示未知，不推测国家。
+
+
+## 0.6.0 巡检修复与升级
+
+分别更新面板和所有恢复版节点，使用各自安装目录的 `update.sh`；自定义服务名使用实际目录。更新后刷新浏览器。
+
+```bash
+# 面板服务器，默认目录
+bash /opt/nyanpass/update.sh
+# 节点服务器，默认目录
+bash /opt/nyanpass-node/update.sh
+```
+
+本版修复站点设置/个人通知白屏、跨用户规则搜索与批量操作、诊断显示、订单与兑换收费、邀请与自动续费、统计与节点权重/离线策略。新增支付回调/补单、Telegram通知与返佣执行；Monaco编辑器资源全部本地化。更新保留数据库和节点身份；有财务历史的账户/套餐删除受保护，可停用/隐藏以保留账务。
+
+配置支付通道需要真实商户资料和网关可达地址。设置回调Host，或在面板 `env.sh` 设置 `NYANPASS_PUBLIC_URL=https://面板域名` 后重启面板。网关回调路径为 `/api/v1/guest/shop/payment/callback/通道名`。Telegram需配置有效Bot并按个人关联提示完成绑定。未配置服务不会伪造付款、关联或通知成功。
+
+Cyber使用原版“订单号+签名通知授权”契约，按已存订单金额入账，额外拦截创建请求重放；原协议未提供独立金额/支付状态/外部流水核验，不应理解为具备这些保证。管理员在原确认窗口中手工补单可用，并独立记录操作者及原因；主动向Cyber网关查询支付状态的协议仍未证明，不伪造查询成功。其他已接入协议包括EPay、EpUSDT、TokenPay、Cryptomus，按各自协议校验。供应商模拟测试不能替代真实商户/Bot验收。
+
+原厂全功能等价、原gRPC运维及原版节点所有版本组合互通仍未证明。ARM64为交叉构建并校验ELF架构，实际运行验证为amd64。

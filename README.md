@@ -21,10 +21,10 @@ S=nyanpass-node bash <(curl -fLSs https://github.com/kiksok/nyanpass-reconstruct
   '-u https://你的面板域名 -t 设备组TOKEN --connect-host 节点可达IP'
 ```
 
-完整说明见 [DEPLOY.md](DEPLOY.md)。当前版本 **v0.5.1**，下载见 [Releases](https://github.com/kiksok/nyanpass-reconstruction/releases)。
+完整说明见 [DEPLOY.md](DEPLOY.md)。当前版本 **v0.6.0**，下载见 [Releases](https://github.com/kiksok/nyanpass-reconstruction/releases)。
 
 恢复版支持原生节点自动配置、同组多机、TCP/UDP 转发、多跳计费、TLS 卸载、入站 PROXY、终端与诊断。原版商业授权服务和原版 gRPC 运维协议没有完整还原；这份发行不宣称与原版所有功能等价。
 
 第三方组件及许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 和二进制展开后的 `licenses/`。
 
-0.5.1 修复两版节点状态页，补齐真实主机CPU、内存、磁盘、网卡流量和运行时间。已有安装请同时更新面板与节点；未更新节点尚未上报的指标显示 `--`，不会伪造为0。
+0.6.0 修复设置/通知白屏、跨用户规则搜索与批量操作、诊断、订单兑换收费、邀请返佣、自动续费、统计和节点策略；接入支付/Telegram执行及完整本地JSON编辑器。已有安装请同时更新面板与节点：分别执行对应目录的 `update.sh`。真实商户和Bot需要配置后验收；Cyber保留原版签名订单通知的校验边界，详见部署文档。

@@ -5,3 +5,5 @@
 Node.js 与 ws 使用各自的 MIT 许可。Go 运行时及 TLS helper 的第三方模块保留其 BSD、MIT 等原许可。前端第三方库保留原有许可通知。完整通知随二进制一起封装在运行目录中的 `licenses/`、Node 的许可文件及前端 vendor 许可文件中。
 
 原始发布前端的著作权属于各自权利人；恢复版新增代码与对接实现不改变原有权利归属。
+
+离线JSON编辑器使用 Monaco Editor 0.45.0（MIT），完整加载器、worker和字体随面板封装，保留 `vendor/monaco-editor-0.45.0/LICENSE` 和 `ThirdPartyNotices.txt`。
