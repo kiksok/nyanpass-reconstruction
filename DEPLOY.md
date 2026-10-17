@@ -126,3 +126,27 @@ UDP 高级行为：
 - `BIND_INBOUND=本机IP` 或 `--bind-inbound=本机IP` 控制业务入口绑定；源进源出按相应本机接口绑定。节点之间的 carrier 监听地址仍由各自监听选项控制。
 
 Linux amd64 完成 416 项源码回归、实际安装节点同端口 TCP/UDP 与首报 PROXY 验收；ARM64 为交叉构建和 ELF 架构校验。本轮根据原节点 REA 函数和离线指令核对上述原版行为，没有新增原 ELF 全量互通验收。原厂所有功能、私有源码及任意版本组合等价仍未证明。
+
+## 0.8.0 控制面代理、ECH、gRPC 与持久记账
+
+面板和所有恢复节点都更新各自 `update.sh`。旧 TCP 规则仍需显式切到 TCP + UDP。新建或保存站点/单端出口时必须选择协议；不再把空协议默认成 direct。历史已有空配置记录不自动修改，编辑时请补选实际协议。
+
+第三方代理按原 `NYA_PROXY`、`HTTPS_PROXY`、`HTTP_PROXY` 的优先级作用于面板 REST 和 gRPC 控制通信，不改变设备组的原生隧道协议。支持 HTTP/HTTPS、SOCKS、SS、Trojan/Trojan-Go、TUIC，以及已确认的 SS 插件和 Trojan 传输/加密变体；可在节点安装目录 `env.sh` 中配置 `export NYA_PROXY='代理URL'`，重启该节点后生效。代理不支持所需协议或失败时返回错误，不回退直连。部分原 URL 的 TLS 不验证证书语义也被保留，使用时按该 URL 参数选择信任策略。
+
+自动节点接受原参数 `-ech`、`-ech-query-name 名称`，可重复查询名；`--ech-resolver IP:端口`、`--panel-ca CA文件` 可用于明确解析器和私有CA。正常 `-ech` 在发现失败时按原路径使用经过证书验证的 TLS；`--require-ech` 要求 ECH 被实际接受。ECH 与代理组合仍保持面板端到端 SNI/证书验证，适用于配置、流量上报、终端及运维。
+
+原 nzproto gRPC 的任务/系统信息/终端双向流已接入面板，未修改原节点可用原 `/api/v1/client/upgrade_grpc`。恢复节点默认继续 HTTP 受管运维；添加 `--operations-transport=grpc` 可显式使用原 wire。管理员对原节点的更新通过原 UI 提供的 `clientScript` 执行并审计摘要；重启需要明确脚本或面板配置的受管命令，不猜测现有服务名称。恢复节点默认更新仍只执行自身安装目录的标记更新器。
+
+自动节点的 state 目录默认保存 `traffic-outbox/`：重启可恢复已写计量和未确认批次，面板持久收据防止重试重复收费。默认名义 50ms 批量同步；`--traffic-sync-ms=0` 逐笔同步。SIGKILL 与断电界限不同，断电可能丢失最后一次同步后的记录；网络发送到计量回调之间不是原子事务。不要在未核对账目时删除 outbox 或故障锁；损坏、磁盘故障和并发进程占用会停止记账及转发，避免悄悄归零。设备组令牌、面板地址或设备 UUID 改变会使用独立账本范围。
+
+普通 HTTP Host/path、透明 TLS SNI、SOCKS 识别进入实际入口；TLS 卸载后也可检查 HTTP。HTTP/1 每个持久请求和 HTTP/2 每个头块都检查，未知加密应用不会被伪称解密。PROXY v2 UNIX/LOCAL/任意合法 TLV 保留原字节；恢复节点间使用协商扩展，不支持该元数据的原/旧节点明确拒绝该路径，普通 IP 头继续使用原格式。
+
+原反向标准路径 `/ws/<入口group_uuid>` 与原 remotes 下发已接通，mux/direct 均验证真实 TCP/UDP。原控制握手没有恢复 HMAC，兼容入口要求已配置且通过面板注册的设备 UUID、注册 IP 和认证数据回拨；`reverse_require_proof:true` 可仅允许现代 HMAC 控制端。原中继额外 TCP 前缀现象仍保留在兼容模式，正常多跳使用恢复版 clean-chain。
+
+节点二进制内置未改官方 sing-box v1.12.10 独立程序及其完整第三方对应源码，不需要另行下载。提取上游源码而不启动节点：
+
+```bash
+/opt/nyanpass-node/current/rel_nodeclient --third-party-source > sing-box-corresponding-source.tar.gz
+```
+
+这份归档包含官方主模块、108个固定版本依赖、许可和构建材料，没有恢复版源码、原厂程序或用户配置。GPL/MIT 等许可说明随包保留。ARM64 继续是交叉构建和架构校验，实际运行验收为 Linux amd64；生产服务未由验收脚本重启。
