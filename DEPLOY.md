@@ -70,6 +70,12 @@ bash /opt/nyanpass/uninstall.sh
 
 ## 发行内容
 
+0.8.1 的新充值订单使用原路径 `/api/v1/guest/payment/支付类型/notify`；已生成的无 `/notify` 地址和按通道名回调的扩展地址继续有效，均需验签后入账。
+
+反向代理后的验证码需要显式配置可信代理地址。首次安装面板前可设置 `NYANPASS_TRUSTED_PROXIES='127.0.0.1/32,::1/128'`；已有安装在面板目录 `env.sh` 增加同名 `export` 后重启面板。只填写实际反代的 IP/CIDR；默认不信任任何转发头。多级代理从 socket 来源向左逐跳验证，遇到未受信任地址即停止。
+
+原 gRPC 节点状态页的更新 URL 由面板转换为下载和安装步骤。已使用恢复安装器的节点保留原服务配置；已核验的 nc20260412 原节点可保留启动参数、UUID、原环境文件和启动脚本备份迁移。未知原二进制或不匹配的目录明确拒绝，管理员可通过运维 API 显式指定命令。安装文件后延后安排 systemd 重启以发送回执，仍须用重新上线的版本确认完成；没有 systemd 的安装需由原进程管理器重启。本轮原 ELF 验证使用临时目录，没有重启生产服务。
+
 Release 提供四个 ELF 文件：`rel_backend_linux_amd64`、`rel_backend_linux_arm64`、`rel_nodeclient_linux_amd64`、`rel_nodeclient_linux_arm64`；另含安装脚本、两种架构的离线包、SHA256SUMS 和发行元数据。安装时无需 GitHub 令牌。
 
 源码与分析工程保留在本地和独立私有归档，公开仓库的 Git 自动源码压缩包只包含本仓库的脚本与文档。

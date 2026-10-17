@@ -23,6 +23,9 @@ WORK=
 OLD_CURRENT=
 SWITCHED=0
 OPTIMIZATION_APPLIED=0
+MIGRATE_ORIGINAL=0
+MIGRATION_WRITES=0
+DEFER_RESTART=0
 NODE_ARGS=()
 
 die() { printf '错误：%s\n' "$*" >&2; exit 1; }
@@ -44,6 +47,8 @@ usage() {
   --checksum-file FILE 本地 SHA256SUMS，必须与 --binary-file 同时传入
   --native-config FILE 原生数据面 JSON 配置（首次复制，更新保留）
   --no-systemd         只生成文件，以 start.sh 前台运行，无需 root
+  --migrate-original   校验已知原版节点与服务布局后保留原启动参数迁移
+  --defer-restart      安装后由调用方安排重启（供节点更新回执使用）
 OPTIMIZE=1 显式安装并应用本服务的 sysctl 优化，可在卸载时恢复。
 INSTALL_TOOLS=1 显式安装常用运维工具，支持 apt-get / dnf / yum。
 NYANPASS_DOWNLOAD_SOURCES 可按空格、逗号或换行指定候选源（github api URL）。
@@ -66,6 +71,8 @@ while (($#)); do
         --download-source) DOWNLOAD_SOURCE=$2 ;;
       esac; shift 2 ;;
     --no-systemd) NO_SYSTEMD=1; shift ;;
+    --migrate-original) MIGRATE_ORIGINAL=1; shift ;;
+    --defer-restart) DEFER_RESTART=1; shift ;;
     --help|-h) usage; exit 0 ;;
     --) shift; NODE_ARGS+=("$@"); break ;;
     *) NODE_ARGS+=("$1"); shift ;;
@@ -146,7 +153,24 @@ fi
 [[ $REPOSITORY =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]] || die '仓库名称无效'
 [[ $VERSION =~ ^[a-zA-Z0-9_.-]+$ ]] || die '版本标签无效'
 if [[ -e $PREFIX && ! -f $PREFIX/.nyanpass-install ]]; then
-  [[ -d $PREFIX && -z $(ls -A "$PREFIX") ]] || die '目录非空且没有安装标记，请选择其他 --prefix'
+  if (( MIGRATE_ORIGINAL )); then
+    [[ $PRODUCT == rel_nodeclient && -d $PREFIX && -O $PREFIX && ! -e $PREFIX/current && ! -L $PREFIX/current && ! -e $PREFIX/service.json && ! -L $PREFIX/service.json && ! -e $PREFIX/start.original.sh && ! -L $PREFIX/start.original.sh && ! -L $PREFIX/.nyanpass-install && ${#NODE_ARGS[@]} -gt 0 ]] || die '原版迁移布局或启动参数无效'
+    original_mode=$(stat -c %a "$PREFIX")
+    (( (8#$original_mode & 0022) == 0 )) || die '原版安装目录不能允许组或其他用户写入'
+    for original_file in rel_nodeclient start.sh env.sh; do
+      [[ -f $PREFIX/$original_file && ! -L $PREFIX/$original_file && -O $PREFIX/$original_file ]] || die '原版迁移要求同所有者的常规程序和启动文件'
+      original_mode=$(stat -c %a "$PREFIX/$original_file")
+      (( (8#$original_mode & 0022) == 0 )) || die '原版安装文件不能允许组或其他用户写入'
+    done
+    [[ $(sha256sum "$PREFIX/rel_nodeclient" | awk '{print $1}') == e432273ac9d7f29287989f6269ef5c9b8fc1080a365d2879a00973b60441f569 ]] || die '只支持已核验的nc20260412原版节点迁移'
+    if (( !NO_SYSTEMD )); then
+      [[ -f $UNIT ]] && grep -Fxq "WorkingDirectory=$PREFIX" "$UNIT" && grep -Fxq "ExecStart=/bin/bash $PREFIX/start.sh" "$UNIT" || die '原版systemd服务与安装目录不匹配'
+    fi
+  else
+    [[ -d $PREFIX && -z $(ls -A "$PREFIX") ]] || die '目录非空且没有安装标记，请选择其他 --prefix'
+  fi
+elif (( MIGRATE_ORIGINAL )); then
+  die '原版迁移仅用于已有未标记的原版节点目录'
 fi
 if [[ -f $PREFIX/.nyanpass-install ]]; then
   [[ $(cat "$PREFIX/.nyanpass-install") == "$SERVICE" ]] || die '服务名与已有安装不匹配'
@@ -187,10 +211,18 @@ WORK=$(mktemp -d "${TMPDIR:-/tmp}/nyanpass-install.XXXXXXXX")
 cleanup() {
   local status=$?
   if (( status != 0 && OPTIMIZATION_APPLIED )); then restore_optimization || true; fi
-  if (( status != 0 && SWITCHED )); then
+  if (( status != 0 && (SWITCHED || (MIGRATE_ORIGINAL && MIGRATION_WRITES)) )); then
     [[ ! -f $WORK/old-start ]] || cp -- "$WORK/old-start" "$PREFIX/start.sh"
     [[ ! -f $WORK/old-service ]] || cp -- "$WORK/old-service" "$PREFIX/service.json"
-    if [[ -n $OLD_CURRENT ]]; then
+    if (( MIGRATE_ORIGINAL )); then
+      rm -f -- "$PREFIX/current" "$PREFIX/service.json" "$PREFIX/.nyanpass-install" "$PREFIX/start.original.sh"
+      for original_script in update.sh uninstall.sh; do
+        if [[ -f $WORK/original-$original_script ]]; then cp -- "$WORK/original-$original_script" "$PREFIX/$original_script"; else rm -f -- "$PREFIX/$original_script"; fi
+      done
+      if [[ -f $WORK/old-unit ]]; then cp -- "$WORK/old-unit" "$UNIT"; systemctl daemon-reload || true; fi
+      if (( !NO_SYSTEMD )); then systemctl restart "$SERVICE.service" || true; fi
+      info '迁移失败，已恢复原版启动文件和服务。' >&2
+    elif [[ -n $OLD_CURRENT ]]; then
       ln -s "$OLD_CURRENT" "$PREFIX/.rollback-current"
       mv -Tf "$PREFIX/.rollback-current" "$PREFIX/current"
       if [[ -f $WORK/old-unit ]]; then cp -- "$WORK/old-unit" "$UNIT"; systemctl daemon-reload || true; fi
@@ -205,6 +237,7 @@ cleanup() {
       fi
     fi
   fi
+  if (( status != 0 && MIGRATE_ORIGINAL )) && [[ ! -e $PREFIX/current ]]; then rm -f -- "$PREFIX/.nyanpass-install"; fi
   [[ -z $WORK || ! -d $WORK ]] || rm -rf -- "$WORK"
   exit "$status"
 }
@@ -323,6 +356,12 @@ mkdir -p "$PREFIX/releases" "$PREFIX/config" "$PREFIX/data"
 printf '%s\n' "$SERVICE" >"$PREFIX/.nyanpass-install"
 [[ ! -f $PREFIX/start.sh ]] || cp -- "$PREFIX/start.sh" "$WORK/old-start"
 [[ ! -f $PREFIX/service.json ]] || cp -- "$PREFIX/service.json" "$WORK/old-service"
+if (( MIGRATE_ORIGINAL )); then
+  for original_script in update.sh uninstall.sh; do [[ ! -f $PREFIX/$original_script ]] || cp -- "$PREFIX/$original_script" "$WORK/original-$original_script"; done
+  # Keep the original executable and a private copy of the original launcher.
+  cp -- "$PREFIX/start.sh" "$PREFIX/start.original.sh"
+  MIGRATION_WRITES=1
+fi
 if (( !NO_SYSTEMD )) && [[ -f $UNIT ]]; then cp -- "$UNIT" "$WORK/old-unit"; fi
 RELEASE_DIR=releases/$APP_VERSION-${EXPECTED:0:12}
 if [[ ! -d $PREFIX/$RELEASE_DIR ]]; then
@@ -357,6 +396,7 @@ if [[ ! -f $PREFIX/env.sh ]]; then
       printf 'export NYANPASS_ADMIN_USER=%q\n' "${NYANPASS_ADMIN_USER:-admin}"
       printf 'export NYANPASS_ADMIN_PASSWORD=%q\n' "$ADMIN_PASSWORD"
       printf 'export NYANPASS_DB=%q\n' "$PREFIX/data/panel.sqlite"
+      [[ -z ${NYANPASS_TRUSTED_PROXIES:-} ]] || printf 'export NYANPASS_TRUSTED_PROXIES=%q\n' "$NYANPASS_TRUSTED_PROXIES"
     fi
   } >"$PREFIX/env.sh"
 fi
@@ -402,9 +442,11 @@ if (( !NO_SYSTEMD )); then
   cp -- "$PREFIX/$SERVICE.service" "$UNIT"
   systemctl daemon-reload
   systemctl enable "$SERVICE.service" >/dev/null
-  systemctl restart "$SERVICE.service"
-  sleep 2
-  systemctl is-active --quiet "$SERVICE.service" || die "启动失败，请查看 journalctl -u $SERVICE -n 80"
+  if (( !DEFER_RESTART )); then
+    systemctl restart "$SERVICE.service"
+    sleep 2
+    systemctl is-active --quiet "$SERVICE.service" || die "启动失败，请查看 journalctl -u $SERVICE -n 80"
+  fi
 fi
 
 apply_optimization() {
