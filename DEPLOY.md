@@ -5,7 +5,7 @@
 ## 面板
 
 ```bash
-bash <(curl -fLSs https://raw.githubusercontent.com/kiksok/nyanpass-reconstruction/main/deploy/nyanpass-install.sh) rel_backend
+bash <(curl -fLSs https://github.com/kiksok/nyanpass-reconstruction/releases/latest/download/nyanpass-install.sh) rel_backend
 ```
 
 安装目录默认 `/opt/nyanpass`，服务名 `nyanpass`，监听 `0.0.0.0:18182`。首次安装显示随机管理员密码，配置保存在 `env.sh`，SQLite 位于 `data/panel.sqlite`。安装前可设置 `NYANPASS_HOST`、`NYANPASS_PORT`、`NYANPASS_ADMIN_USER`、`NYANPASS_ADMIN_PASSWORD`。
@@ -17,7 +17,7 @@ bash <(curl -fLSs https://raw.githubusercontent.com/kiksok/nyanpass-reconstructi
 在设备组页面选择“对接”，设置服务名、下载线路、可选连接地址，复制生成的命令到节点机器执行。同组多机使用同一 token，每台机器保留独立 UUID。多网卡或 NAT 环境请填写可被入口访问的 `--connect-host`；默认网卡地址未必是公网地址。
 
 ```bash
-S=nyanpass-node bash <(curl -fLSs https://raw.githubusercontent.com/kiksok/nyanpass-reconstruction/main/deploy/nyanpass-install.sh) rel_nodeclient \
+S=nyanpass-node bash <(curl -fLSs https://github.com/kiksok/nyanpass-reconstruction/releases/latest/download/nyanpass-install.sh) rel_nodeclient \
   '-u https://你的面板域名 -t 设备组TOKEN --connect-host 节点可达IP'
 ```
 

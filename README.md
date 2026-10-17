@@ -7,7 +7,7 @@
 在目标 Linux 服务器以 root 执行：
 
 ```bash
-bash <(curl -fLSs https://raw.githubusercontent.com/kiksok/nyanpass-reconstruction/main/deploy/nyanpass-install.sh) rel_backend
+bash <(curl -fLSs https://github.com/kiksok/nyanpass-reconstruction/releases/latest/download/nyanpass-install.sh) rel_backend
 ```
 
 默认访问 `http://服务器IP:18182`；安装结束显示初始管理员密码。HTTPS 可由现有反向代理提供。
@@ -17,7 +17,7 @@ bash <(curl -fLSs https://raw.githubusercontent.com/kiksok/nyanpass-reconstructi
 节点安装示例：
 
 ```bash
-S=nyanpass-node bash <(curl -fLSs https://raw.githubusercontent.com/kiksok/nyanpass-reconstruction/main/deploy/nyanpass-install.sh) rel_nodeclient \
+S=nyanpass-node bash <(curl -fLSs https://github.com/kiksok/nyanpass-reconstruction/releases/latest/download/nyanpass-install.sh) rel_nodeclient \
   '-u https://你的面板域名 -t 设备组TOKEN --connect-host 节点可达IP'
 ```
 
