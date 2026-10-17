@@ -73,3 +73,9 @@ bash /opt/nyanpass/uninstall.sh
 Release 提供四个 ELF 文件：`rel_backend_linux_amd64`、`rel_backend_linux_arm64`、`rel_nodeclient_linux_amd64`、`rel_nodeclient_linux_arm64`；另含安装脚本、两种架构的离线包、SHA256SUMS 和发行元数据。安装时无需 GitHub 令牌。
 
 源码与分析工程保留在本地和独立私有归档，公开仓库的 Git 自动源码压缩包只包含本仓库的脚本与文档。
+
+## 0.5.1 节点状态修复
+
+面板与节点均需更新。分别在对应机器运行其安装目录中的 `update.sh`：默认面板为 `bash /opt/nyanpass/update.sh`，默认节点为 `bash /opt/nyanpass-node/update.sh`；自定义服务名时使用实际路径。更新保留账号、数据库、设备组token、节点UUID及证书。面板管理员也可在节点状态页下发恢复版节点的受控更新。
+
+更新后刷新状态页面。新旧两页均能独立初始化，不要求先打开首页或依赖旧浏览器更新缓存。CPU与网卡速率在下一次心跳后得到有效差值；首次采样或旧节点没有上报的指标显示 `--`。无地区数据时显示未知，不推测国家。
