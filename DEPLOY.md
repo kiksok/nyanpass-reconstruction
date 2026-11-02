@@ -1,5 +1,7 @@
 # Linux 部署
 
+0.8.2 修复节点长期运行的控制面请求内存泄漏。已有节点在实际安装目录执行 `bash update.sh --version v0.8.2`，保留配置、UUID、证书和账本；更新会重启节点并中断其现有连接，应在维护时机执行。本修复不依赖提高V8堆上限，面板0.8.1可继续对接新节点。
+
 支持现代 glibc Linux amd64 / arm64；推荐 Debian 11+、Ubuntu 22.04+。Alpine/musl 不受当前内置 Node 运行时支持。需要 bash、curl、CA 证书、sha256sum；离线包另需 unzip。systemd 安装使用 root；无 root 可用 `--no-systemd --prefix /home/用户名/nyanpass`。
 
 ## 面板
